@@ -174,8 +174,26 @@ class Tx:
         # add SIGHASH_ALL using int_to_little_endian in 4 bytes
         # hash256 the serialization
         # convert the result to an integer using int.from_bytes(x, 'big')
-        raise NotImplementedError
-
+        txhash = int_to_little_endian(self.version, 4)
+        txhash += encode_varint(len(self.tx_ins))
+        
+        for index in range(len(self.tx_ins)):
+            inn = self.tx_ins[index]
+            txhash += inn.prev_tx[::-1]
+            txhash += int_to_little_endian(inn.prev_index, 4)
+            if index == input_index:
+                txhash += inn.script_pubkey().serialize()
+            txhash += int_to_little_endian(inn.sequence, 4)
+            
+        txhash += encode_varint(len(self.tx_outs))
+        for tx_out in self.tx_outs:
+            txhash += tx_out.serialize()
+        txhash += int_to_little_endian(self.locktime, 4)
+        txhash += int_to_little_endian(1, 4)
+        txhash256 = hash256(txhash)
+        return int.from_bytes(txhash256, 'big')
+    
+        
     def verify_input(self, input_index):
         '''Returns whether the input has a valid signature'''
         # get the relevant input
@@ -183,7 +201,12 @@ class Tx:
         # get the signature hash (z)
         # combine the current ScriptSig and the previous ScriptPubKey
         # evaluate the combined script
-        raise NotImplementedError
+        inn = self.tx_ins[input_index]
+        scriptPubKey = inn.script_pubkey()
+        z = self.sig_hash(input_index)
+        scriptSig = inn.script_sig
+        combined = scriptSig + scriptPubKey
+        return combined.evaluate(z)
 
     # tag::source2[]
     def verify(self):
@@ -204,8 +227,13 @@ class Tx:
         # initialize a new script with [sig, sec] as the cmds
         # change input's script_sig to new script
         # return whether sig is valid using self.verify_input
-        raise NotImplementedError
-
+        z = self.sig_hash(input_index)
+        der = private_key.sign(z).der()
+        sig = der + SIGHASH_ALL.to_bytes(1, 'big')
+        sec = private_key.point.sec()
+        script_sig = Script([sig, sec]) 
+        self.tx_ins[input_index].script_sig = script_sig 
+        return self.verify_input(input_index)
 
 class TxIn:
 

@@ -29,7 +29,12 @@ class BloomFilter:
             # get the murmur3 hash given that seed
             # set the bit at the hash mod the bitfield size (self.size*8)
             # set the bit field at bit to be 1
-        raise NotImplementedError
+        for i in range(self.function_count):
+            seed = i*BIP37_CONSTANT + self.tweak
+            h = murmur3(item, seed)
+            pos = h % (self.size*8)
+            self.bit_field[pos] = 1
+        
 
     def filter_bytes(self):
         return bit_field_to_bytes(self.bit_field)
@@ -43,7 +48,12 @@ class BloomFilter:
         # flag is 1 byte little endian
         # return a GenericMessage whose command is b'filterload'
         # and payload is what we've calculated
-        raise NotImplementedError
+        payload = encode_varint(self.size)
+        payload += self.filter_bytes()
+        payload += int_to_little_endian(self.function_count, 4)
+        payload += int_to_little_endian(self.tweak, 4)
+        payload += int_to_little_endian(flag, 1)
+        return GenericMessage(b'filterload', payload)
 
 
 class BloomFilterTest(TestCase):

@@ -647,7 +647,11 @@ def op_hash160(stack):
     # check that there's at least 1 element on the stack
     # pop off the top element from the stack
     # push a hash160 of the popped off element to the stack
-    raise NotImplementedError
+    if len(stack) < 1:
+        return False
+    element = stack.pop()
+    stack.append(hash160(element))
+    return True
 
 
 # tag::source2[]
@@ -668,7 +672,15 @@ def op_checksig(stack, z):
     # parse the serialized pubkey and signature into objects
     # verify the signature using S256Point.verify()
     # push an encoded 1 or 0 depending on whether the signature verified
-    raise NotImplementedError
+    if len(stack) < 2:
+        return False
+    sec_pk = stack.pop()
+    sig = stack.pop()
+    sig = sig[:-1]
+    public_key = S256Point.parse(sec_pk)
+    signature = Signature.parse(sig)
+    stack.append(encode_num(1)) if public_key.verify(z, signature) else stack.append(encode_num(0))
+    return True
 
 
 def op_checksigverify(stack, z):

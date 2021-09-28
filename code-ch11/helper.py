@@ -176,7 +176,7 @@ def calculate_new_bits(previous_bits, time_differential):
 def merkle_parent(hash1, hash2):
     '''Takes the binary hashes and calculates the hash256'''
     # return the hash256 of hash1 + hash2
-    raise NotImplementedError
+    return hash256(hash1 + hash2)
 
 
 def merkle_parent_level(hashes):
@@ -190,7 +190,15 @@ def merkle_parent_level(hashes):
         # get the merkle parent of the hashes at index i and i+1
         # append parent to parent level
     # return parent level
-    raise NotImplementedError
+    if len(hashes) == 1:
+        raise Exception
+    if len(hashes) % 2 != 0:
+        hashes.append(hashes[-1])
+    next_level = []
+    for i in range(0, len(hashes), 2):
+        parent = merkle_parent(hashes[i], hashes[i+1])
+        next_level.append(parent)
+    return next_level
 
 
 def merkle_root(hashes):
@@ -200,7 +208,10 @@ def merkle_root(hashes):
     # loop until there's exactly 1 element
         # current level becomes the merkle parent level
     # return the 1st item of the current level
-    raise NotImplementedError
+    current = hashes
+    while len(current) > 1:
+        current = merkle_parent_level(current)
+    return current[0]
 
 
 def bit_field_to_bytes(bit_field):
